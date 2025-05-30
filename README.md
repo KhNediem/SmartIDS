@@ -51,7 +51,7 @@ The dashboard will be available at [http://localhost:3000](http://localhost:3000
 python -m venv venv
 
 # On Windows
-venv\Scripts\activate
+source venv/Scripts/activate
 
 # On macOS/Linux
 source venv/bin/activate
