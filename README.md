@@ -106,7 +106,9 @@ python ids_data_collector.py --list-interfaces
 ```bash
 # Replace "Wi-Fi" with your network interface name
 python ids_data_collector.py -i "Wi-Fi" --nextjs http://localhost:3000
+#After successfully running the IDS collector, you can switch between ML models in the dashboard on the top of the page
 ```
+
 
 **Note**: If you can't terminate the packet capture from the terminal with CTRL+C, you can terminate it by going to the task manager. Look for a Python process that uses around 270MB of memory.
 
