@@ -35,8 +35,8 @@ cybersec-traffic-analyzer/
 
 \`\`\`bash
 # Clone the repository
-git clone https://github.com/KhNediem/SmartIDS.git
-cd SmartIDS
+git clone https://github.com/KhNediem/SmartIDS-The-Packet-Sniffers
+cd SmartIDS-The-Packet-Sniffers
 
 # Install dependencies
 npm install
