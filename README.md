@@ -52,10 +52,13 @@ The dashboard will be available at http://localhost:3000
 \`\`\`bash
 # Create and activate a virtual environment (optional but recommended)
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  | # On Windows: venv\Scripts\activate
 
 # Install required packages
 pip install scapy numpy joblib scikit-learn tensorflow requests
+
+TensorFlow works best with Python versions 3.10-3.11 and it currentlt does not support Python 3.13
+If needed, here's the link to download one those versions : python.org/downloads, after selecting the version and running the installer, make sure to tick the option "Add to PATH" during installation.
 
 # For Windows users, you may need to install Npcap:
 # Download from https://npcap.com/
