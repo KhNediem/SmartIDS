@@ -101,3 +101,15 @@ python ids_nextjs_bridge.py
 - The default URL for the Next.js API is http://localhost:3000
 \`\`\`
 
+
+
+## Description of the solution
+A real-time intrusion detections system for network traffic, implemented through a combination of machine learning models and a simple web dashboard.
+The Python backend captures live network traffic, processes the packets to extract features, and classify them using models trained on the NSL-KDD dataset.
+The results and predictions are visualized in real time through a Node.js frontend.
+
+## Key achievements 
+- Functional real-time ML pipeline for network traffic analysis.
+- Python based packet inspection with a live dashboard.
+- Binary classification using neural networks and XGBooost ( normal || malicious )
+- Live packet capture support 
