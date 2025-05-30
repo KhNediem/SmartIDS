@@ -112,5 +112,5 @@ The results and predictions are visualized in real time through a Node.js fronte
 ## Key achievements 
 - Functional real-time ML pipeline for network traffic analysis.
 - Python based packet inspection with a live dashboard.
-- Binary classification using neural networks and XGBooost ( normal || malicious )
-- Live packet capture support 
+- Binary classification using neural networks and XGBooost ( normal || malicious ) .
+- Support for live packet capture.
