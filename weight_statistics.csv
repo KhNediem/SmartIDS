@@ -1,0 +1,9 @@
+Layer,Type,Weights Shape,Biases Shape,Weights Mean,Weights Std,Biases Mean,Biases Std,Gamma Shape,Beta Shape,Moving Mean Shape,Moving Variance Shape
+Layer 1 (dense_5),Dense,"(41, 128)","(128,)",-0.004106,0.121832,-0.090167,0.078102,,,,
+Layer 2 (batch_normalization_3),BatchNorm,,,,,,,"(128,)","(128,)","(128,)","(128,)"
+Layer 4 (dense_6),Dense,"(128, 64)","(64,)",-0.006072,0.112402,-0.027125,0.078141,,,,
+Layer 5 (batch_normalization_4),BatchNorm,,,,,,,"(64,)","(64,)","(64,)","(64,)"
+Layer 7 (dense_7),Dense,"(64, 32)","(32,)",-0.008475,0.152302,0.109202,0.090883,,,,
+Layer 8 (batch_normalization_5),BatchNorm,,,,,,,"(32,)","(32,)","(32,)","(32,)"
+Layer 10 (dense_8),Dense,"(32, 16)","(16,)",-0.003395,0.228290,0.121194,0.081602,,,,
+Layer 12 (dense_9),Dense,"(16, 1)","(1,)",0.003897,0.389446,-0.049850,0.000000,,,,
