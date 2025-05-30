@@ -86,9 +86,6 @@ python ids_data_collector.py -i "Wi-Fi" --nextjs http://localhost:3000
 
 (If for some reason, you can't terminate the packet capture from the terminal with CTRL+C, you can terminate it by going to the task manager, it'll be a python process that uses around 270mb of memory)
 
-### 4. Testing the Integration
-
-\`\`\`bash
 # Test the connection between Python and Next.js
 python ids_nextjs_bridge.py
 \`\`\`
