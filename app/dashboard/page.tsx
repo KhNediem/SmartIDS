@@ -196,24 +196,15 @@ export default function Dashboard() {
 
         {/* Key Metrics Grid */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600">Accuracy</p>
-                  <p className="text-2xl font-bold text-green-600">{metrics.accuracy.toFixed(1)}%</p>
-                </div>
-                <Target className="h-8 w-8 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-
+          
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Throughput</p>
-                  <p className="text-2xl font-bold text-blue-600">{metrics.throughput}</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {isNaN(metrics.throughput) ? "0" : metrics.throughput}
+                  </p>
                   <p className="text-xs text-slate-500">connections/min</p>
                 </div>
                 <Zap className="h-8 w-8 text-blue-600" />
@@ -226,7 +217,9 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Attacks Detected</p>
-                  <p className="text-2xl font-bold text-red-600">{metrics.attacksDetected}</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {isNaN(metrics.attacksDetected) ? "0" : metrics.attacksDetected}
+                  </p>
                   <p className="text-xs text-slate-500">total</p>
                 </div>
                 <AlertTriangle className="h-8 w-8 text-red-600" />
@@ -239,7 +232,9 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Human Traffic</p>
-                  <p className="text-2xl font-bold text-blue-600">{metrics.humanTraffic}</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {isNaN(metrics.humanTraffic) ? "0" : metrics.humanTraffic}
+                  </p>
                   <p className="text-xs text-slate-500">connections</p>
                 </div>
                 <User className="h-8 w-8 text-blue-600" />
@@ -252,7 +247,11 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Bot/AI Traffic</p>
-                  <p className="text-2xl font-bold text-purple-600">{metrics.botTraffic + metrics.aiTraffic}</p>
+                  <p className="text-2xl font-bold text-purple-600">
+                    {isNaN(metrics.botTraffic) || isNaN(metrics.aiTraffic)
+                      ? "0"
+                      : (metrics.botTraffic || 0) + (metrics.aiTraffic || 0)}
+                  </p>
                   <p className="text-xs text-slate-500">connections</p>
                 </div>
                 <Bot className="h-8 w-8 text-purple-600" />
@@ -276,23 +275,23 @@ export default function Dashboard() {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span>Precision</span>
-                    <span>{metrics.precision.toFixed(1)}%</span>
+                    <span>{isNaN(metrics.precision) ? "0.0" : metrics.precision.toFixed(1)}%</span>
                   </div>
-                  <Progress value={metrics.precision * 100} className="h-2" />
+                  <Progress value={isNaN(metrics.precision) ? 0 : metrics.precision * 100} className="h-2" />
                 </div>
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span>Recall</span>
-                    <span>{metrics.recall.toFixed(1)}%</span>
+                    <span>{isNaN(metrics.recall) ? "0.0" : metrics.recall.toFixed(1)}%</span>
                   </div>
-                  <Progress value={metrics.recall * 100} className="h-2" />
+                  <Progress value={isNaN(metrics.recall) ? 0 : metrics.recall * 100} className="h-2" />
                 </div>
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span>F1-Score</span>
-                    <span>{metrics.f1Score.toFixed(1)}%</span>
+                    <span>{isNaN(metrics.f1Score) ? "0.0" : metrics.f1Score.toFixed(1)}%</span>
                   </div>
-                  <Progress value={metrics.f1Score * 100} className="h-2" />
+                  <Progress value={isNaN(metrics.f1Score) ? 0 : metrics.f1Score * 100} className="h-2" />
                 </div>
               </div>
             </CardContent>
@@ -314,21 +313,27 @@ export default function Dashboard() {
                       <User className="h-4 w-4 text-blue-600" />
                       <span className="font-medium">Human</span>
                     </div>
-                    <p className="text-lg font-semibold text-blue-600">{metrics.humanTraffic}</p>
+                    <p className="text-lg font-semibold text-blue-600">
+                      {isNaN(metrics.humanTraffic) ? "0" : metrics.humanTraffic}
+                    </p>
                   </div>
                   <div className="text-center">
                     <div className="flex items-center justify-center gap-1 mb-1">
                       <Bot className="h-4 w-4 text-orange-600" />
                       <span className="font-medium">Bot</span>
                     </div>
-                    <p className="text-lg font-semibold text-orange-600">{metrics.botTraffic}</p>
+                    <p className="text-lg font-semibold text-orange-600">
+                      {isNaN(metrics.botTraffic) ? "0" : metrics.botTraffic}
+                    </p>
                   </div>
                   <div className="text-center">
                     <div className="flex items-center justify-center gap-1 mb-1">
                       <Brain className="h-4 w-4 text-purple-600" />
                       <span className="font-medium">AI</span>
                     </div>
-                    <p className="text-lg font-semibold text-purple-600">{metrics.aiTraffic}</p>
+                    <p className="text-lg font-semibold text-purple-600">
+                      {isNaN(metrics.aiTraffic) ? "0" : metrics.aiTraffic}
+                    </p>
                   </div>
                 </div>
 
@@ -352,16 +357,16 @@ export default function Dashboard() {
         </div>
 
         {/* Charts */}
-        <div className="grid lg:grid-cols-2 gap-6 mb-8">
+        {/* <div className="grid lg:grid-cols-2 gap-6 mb-8">
           <MetricsChart />
           <ThreatDetectionChart />
-        </div>
+        </div> */}
 
         {/* Live Detection */}
         <LiveDetection />
 
         {/* Network Features */}
-        <NetworkFeatures />
+        {/* <NetworkFeatures /> */}
       </div>
     </div>
   )

@@ -356,33 +356,33 @@ class IDSDataCollector:
         """Send current stats to Next.js dashboard"""
         if not self.nextjs_enabled:
             return
-            
+        
         try:
             stats_data = {
                 "type": "stats",
                 "data": {
-                    "totalPackets": self.packet_count,
-                    "activeConnections": len(self.active_connections),
-                    "completedConnections": len(self.completed_connections),
-                    "errors": self.error_count,
+                    "totalPackets": int(self.packet_count),
+                    "activeConnections": int(len(self.active_connections)),
+                    "completedConnections": int(len(self.completed_connections)),
+                    "errors": int(self.error_count),
                     "startTime": self.start_time.isoformat(),
-                    "modelName": self.model_name,
-                    "modelType": self.current_model_type,
-                    "modelAccuracy": self.model_accuracy
+                    "modelName": str(self.model_name),
+                    "modelType": str(self.current_model_type),
+                    "modelAccuracy": float(self.model_accuracy) if not np.isnan(self.model_accuracy) else 0.0
                 }
             }
-            
+        
             response = requests.post(
                 f"{self.nextjs_url}/api/ids/metrics",
                 json=stats_data,
                 timeout=5
             )
-            
+        
             if response.status_code == 200:
                 print("✓ Sent stats to Next.js dashboard")
             else:
                 print(f"⚠ Failed to send stats: {response.status_code}")
-                
+        
         except Exception as e:
             print(f"⚠ Error sending stats to Next.js: {e}")
     
@@ -390,7 +390,7 @@ class IDSDataCollector:
         """Send a connection record to Next.js dashboard"""
         if not self.nextjs_enabled:
             return
-            
+        
         try:
             # Add connection key information
             api_data = connection_record.copy()
@@ -399,18 +399,51 @@ class IDSDataCollector:
             api_data["src_port"] = conn_key.src_port
             api_data["dst_port"] = conn_key.dst_port
             api_data["protocol"] = conn_key.protocol
-            
+        
+            # Convert numpy types to Python types for JSON serialization
+            def convert_numpy_types(obj):
+                if isinstance(obj, np.integer):
+                    return int(obj)
+                elif isinstance(obj, np.floating):
+                    return float(obj)
+                elif isinstance(obj, np.ndarray):
+                    return obj.tolist()
+                elif isinstance(obj, dict):
+                    return {key: convert_numpy_types(value) for key, value in obj.items()}
+                elif isinstance(obj, list):
+                    return [convert_numpy_types(item) for item in obj]
+                else:
+                    return obj
+        
+            # Convert all numpy types in the data
+            api_data = convert_numpy_types(api_data)
+        
+            # Ensure confidence values are valid numbers
+            if 'confidence' in api_data:
+                confidence = api_data['confidence']
+                if not isinstance(confidence, (int, float)) or np.isnan(confidence) or np.isinf(confidence):
+                    api_data['confidence'] = 0.5
+                else:
+                    api_data['confidence'] = float(confidence)
+        
+            if 'traffic_source_confidence' in api_data:
+                ts_confidence = api_data['traffic_source_confidence']
+                if not isinstance(ts_confidence, (int, float)) or np.isnan(ts_confidence) or np.isinf(ts_confidence):
+                    api_data['traffic_source_confidence'] = 0.5
+                else:
+                    api_data['traffic_source_confidence'] = float(ts_confidence)
+        
             response = requests.post(
                 f"{self.nextjs_url}/api/ids/connections",
                 json=api_data,
                 timeout=5
             )
-            
+        
             if response.status_code == 200:
                 print(f"\n✓ Sent connection to dashboard: {conn_key}")
             else:
                 print(f"\n⚠ Failed to send connection: {response.status_code}")
-                
+        
         except Exception as e:
             print(f"\n⚠ Error sending connection to Next.js: {e}")
     

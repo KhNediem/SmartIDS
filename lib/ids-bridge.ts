@@ -90,23 +90,23 @@ class IDSDataStore {
       this.connections = this.connections.slice(0, 1000) // Keep last 1000
     }
 
-    // Update metrics
+    // Update metrics with safe number handling
     if (connection.classification === "anomaly") {
-      this.metrics.attacksDetected++
+      this.metrics.attacksDetected = (this.metrics.attacksDetected || 0) + 1
     } else {
-      this.metrics.normalTraffic++
+      this.metrics.normalTraffic = (this.metrics.normalTraffic || 0) + 1
     }
 
-    // Update traffic source metrics
+    // Update traffic source metrics with safe number handling
     switch (connection.traffic_source) {
       case "human":
-        this.metrics.humanTraffic++
+        this.metrics.humanTraffic = (this.metrics.humanTraffic || 0) + 1
         break
       case "bot":
-        this.metrics.botTraffic++
+        this.metrics.botTraffic = (this.metrics.botTraffic || 0) + 1
         break
       case "ai":
-        this.metrics.aiTraffic++
+        this.metrics.aiTraffic = (this.metrics.aiTraffic || 0) + 1
         break
     }
 
@@ -127,8 +127,26 @@ class IDSDataStore {
     })
   }
 
+  // Add a helper method to ensure safe numbers
+  private ensureSafeNumber(value: any): number {
+    if (typeof value !== "number" || isNaN(value) || !isFinite(value)) {
+      return 0
+    }
+    return value
+  }
+
+  // Update the updateMetrics method
   updateMetrics(newMetrics: Partial<IDSMetrics>) {
-    this.metrics = { ...this.metrics, ...newMetrics }
+    // Ensure all metrics are safe numbers
+    const safeMetrics = Object.keys(newMetrics).reduce(
+      (acc, key) => {
+        acc[key as keyof IDSMetrics] = this.ensureSafeNumber(newMetrics[key as keyof IDSMetrics])
+        return acc
+      },
+      {} as Partial<IDSMetrics>,
+    )
+
+    this.metrics = { ...this.metrics, ...safeMetrics }
     this.notifySubscribers({
       type: "metrics_update",
       data: this.metrics,

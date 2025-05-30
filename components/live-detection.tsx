@@ -88,16 +88,16 @@ export function LiveDetection() {
                     >
                       {connection.classification}
                     </Badge>
-                    <span className="text-sm font-medium">{(connection.confidence * 100).toFixed(1)}% confidence</span>
+                    <span className="text-sm font-medium">
+                      {isNaN(connection.traffic_source_confidence) ? "50.0" : (connection.traffic_source_confidence * 100).toFixed(1)}% confidence
+                    </span>
 
                     {/* Traffic Source Badge */}
                     <Badge variant="secondary" className={`gap-1 ${getTrafficSourceColor(connection.traffic_source)}`}>
                       {getTrafficSourceIcon(connection.traffic_source)}
                       {connection.traffic_source}
                     </Badge>
-                    <span className="text-xs text-slate-500">
-                      ({(connection.traffic_source_confidence * 100).toFixed(0)}%)
-                    </span>
+                    
                   </div>
                   <div className="flex items-center gap-1 text-xs text-slate-500">
                     <Clock className="h-3 w-3" />
