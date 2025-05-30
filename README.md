@@ -2,6 +2,11 @@
 
 This project combines a Python-based network traffic analyzer with a Next.js dashboard for real-time visualization of network security threats.
 
+Here is the csv file containing the weight for the neural networks model : [weight_statistics.csv](https://github.com/KhNediem/SmartIDS-The-Packet-Sniffers/blob/master/weight_statistics.csv)
+
+The weights are also included in the technical report, in a shorter more concise form.
+
+
 ## Project Structure
 
 \`\`\`
