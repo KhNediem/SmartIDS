@@ -59,7 +59,7 @@ pip install scapy numpy joblib scikit-learn tensorflow requests
 
 # TensorFlow works best with Python versions 3.10-3.11 and it currently does not support Python 3.13
 
-If needed, here's the link to download one those versions : python.org/downloads, after selecting the version and running the installer, make sure to tick the option "Add to PATH" during installation.
+If needed, here's the link to download one those versions : [python.org/downloads](https://www.python.org/downloads/), after selecting the version and running the installer, make sure to tick the option "Add to PATH" during installation.
 
 # For Windows users, you may need to install Npcap:
 # Download from https://npcap.com/
@@ -77,6 +77,8 @@ python ids_data_collector.py --list-interfaces
 # Start the collector (replace "Wi-Fi" with your interface)
 python ids_data_collector.py -i "Wi-Fi" -m complete_nn_ids_model.pkl
 \`\`\`
+
+(If for some reason, you can't terminate the packet capture from the terminal with CTRL+C, you can terminate it by going to the task manager, it'll be a python process that uses around 270mb of RAM)
 
 ### 4. Testing the Integration
 
