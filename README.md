@@ -35,7 +35,7 @@ cybersec-traffic-analyzer/
 
 \`\`\`bash
 # Clone the repository
-git clone https://github.com/yourusername/cybersec-traffic-analyzer.git
+git clone https://github.com/KhNediem/cybersec-traffic-analyzer.git
 cd cybersec-traffic-analyzer
 
 # Install dependencies
