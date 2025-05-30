@@ -7,33 +7,6 @@ Here is the csv file containing the weight for the neural networks model : [weig
 The weights are also included in the technical report, in a shorter more concise form.
 
 
-## Project Structure
-
-\`\`\`
-cybersec-traffic-analyzer/
-├── app/                           # Next.js app directory
-│   ├── api/                       # API routes
-│   │   └── ids/                   # IDS API endpoints
-│   │       ├── connections/       # Connection data endpoint
-│   │       ├── metrics/           # Metrics and stats endpoint
-│   │       └── stream/            # SSE streaming endpoint
-│   ├── dashboard/                 # Dashboard page
-│   ├── setup/                     # Setup instructions page
-│   └── page.tsx                   # Home/model selection page
-├── components/                    # React components
-│   ├── live-detection.tsx         # Live traffic detection component
-│   ├── metrics-chart.tsx          # Performance metrics chart
-│   └── ...                        # Other UI components
-├── hooks/                         # React hooks
-│   └── use-ids-data.ts            # Hook for IDS data
-├── lib/                           # Shared utilities
-│   └── ids-bridge.ts              # Bridge between Python and Next.js
-├── python/                        # Python scripts
-│   ├── ids_data_collector.py      # Main IDS collector script
-│   └── ids_nextjs_bridge.py       # Bridge to send data to Next.js
-└── public/                        # Static assets
-\`\`\`
-
 ## Setup Instructions
 
 ### 1. Next.js Dashboard Setup
