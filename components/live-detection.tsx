@@ -2,8 +2,34 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, CheckCircle, Activity, Clock, Wifi, WifiOff } from "lucide-react"
+import { AlertTriangle, CheckCircle, Activity, Clock, Wifi, WifiOff, User, Bot, Brain } from "lucide-react"
 import { useIDSData } from "@/hooks/use-ids-data"
+
+const getTrafficSourceIcon = (source: string) => {
+  switch (source) {
+    case "human":
+      return <User className="h-3 w-3" />
+    case "bot":
+      return <Bot className="h-3 w-3" />
+    case "ai":
+      return <Brain className="h-3 w-3" />
+    default:
+      return <Activity className="h-3 w-3" />
+  }
+}
+
+const getTrafficSourceColor = (source: string) => {
+  switch (source) {
+    case "human":
+      return "bg-blue-100 text-blue-800"
+    case "bot":
+      return "bg-orange-100 text-orange-800"
+    case "ai":
+      return "bg-purple-100 text-purple-800"
+    default:
+      return "bg-gray-100 text-gray-800"
+  }
+}
 
 export function LiveDetection() {
   const { connections, isConnected, error } = useIDSData()
@@ -29,7 +55,7 @@ export function LiveDetection() {
           </div>
         </CardTitle>
         <CardDescription>
-          Real-time neural network classification results
+          Real-time neural network classification results with traffic source detection
           {error && <span className="text-red-500 ml-2">({error})</span>}
         </CardDescription>
       </CardHeader>
@@ -63,6 +89,15 @@ export function LiveDetection() {
                       {connection.classification}
                     </Badge>
                     <span className="text-sm font-medium">{(connection.confidence * 100).toFixed(1)}% confidence</span>
+
+                    {/* Traffic Source Badge */}
+                    <Badge variant="secondary" className={`gap-1 ${getTrafficSourceColor(connection.traffic_source)}`}>
+                      {getTrafficSourceIcon(connection.traffic_source)}
+                      {connection.traffic_source}
+                    </Badge>
+                    <span className="text-xs text-slate-500">
+                      ({(connection.traffic_source_confidence * 100).toFixed(0)}%)
+                    </span>
                   </div>
                   <div className="flex items-center gap-1 text-xs text-slate-500">
                     <Clock className="h-3 w-3" />

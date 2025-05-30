@@ -29,8 +29,10 @@ export async function POST(request: NextRequest) {
       src_bytes: data.src_bytes || 0,
       dst_bytes: data.dst_bytes || 0,
       classification: data.class === "anomaly" ? "anomaly" : "normal",
-      confidence: data.confidence || 0.95,
+      confidence: data.confidence || 0.5, // Use actual confidence from model
       flag: data.flag || "SF",
+      traffic_source: data.traffic_source || "unknown",
+      traffic_source_confidence: data.traffic_source_confidence || 0.5,
       features: {
         duration: data.duration || 0,
         protocol_type: data.protocol_type || "tcp",

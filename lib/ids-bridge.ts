@@ -1,4 +1,4 @@
-// Bridge between Python IDS and Next.js dashboard
+// Enhanced bridge between Python IDS and Next.js dashboard
 export interface IDSConnection {
   id: string
   timestamp: string
@@ -14,6 +14,8 @@ export interface IDSConnection {
   classification: "normal" | "anomaly"
   confidence: number
   flag: string
+  traffic_source: "human" | "bot" | "ai" | "unknown"
+  traffic_source_confidence: number
   features: {
     [key: string]: number | string
   }
@@ -30,6 +32,9 @@ export interface IDSMetrics {
   attacksDetected: number
   normalTraffic: number
   falsePositives: number
+  humanTraffic: number
+  botTraffic: number
+  aiTraffic: number
 }
 
 export interface IDSStats {
@@ -39,6 +44,13 @@ export interface IDSStats {
   errors: number
   startTime: string
   modelName: string
+  modelType: "neural-network" | "xgboost" | "unknown"
+  modelAccuracy: number
+}
+
+export interface ModelSwitchRequest {
+  modelType: "neural-network" | "xgboost"
+  timestamp: string
 }
 
 // In-memory storage for demo (in production, use a database)
@@ -55,6 +67,9 @@ class IDSDataStore {
     attacksDetected: 0,
     normalTraffic: 0,
     falsePositives: 0,
+    humanTraffic: 0,
+    botTraffic: 0,
+    aiTraffic: 0,
   }
   private stats: IDSStats = {
     totalPackets: 0,
@@ -63,8 +78,11 @@ class IDSDataStore {
     errors: 0,
     startTime: new Date().toISOString(),
     modelName: "none",
+    modelType: "unknown",
+    modelAccuracy: 0,
   }
   private subscribers: ((data: any) => void)[] = []
+  private currentModelRequest: ModelSwitchRequest | null = null
 
   addConnection(connection: IDSConnection) {
     this.connections.unshift(connection) // Add to beginning
@@ -77,6 +95,19 @@ class IDSDataStore {
       this.metrics.attacksDetected++
     } else {
       this.metrics.normalTraffic++
+    }
+
+    // Update traffic source metrics
+    switch (connection.traffic_source) {
+      case "human":
+        this.metrics.humanTraffic++
+        break
+      case "bot":
+        this.metrics.botTraffic++
+        break
+      case "ai":
+        this.metrics.aiTraffic++
+        break
     }
 
     this.stats.completedConnections = this.connections.length
@@ -102,6 +133,28 @@ class IDSDataStore {
       type: "metrics_update",
       data: this.metrics,
     })
+  }
+
+  requestModelSwitch(modelType: "neural-network" | "xgboost") {
+    this.currentModelRequest = {
+      modelType,
+      timestamp: new Date().toISOString(),
+    }
+
+    this.notifySubscribers({
+      type: "model_switch_request",
+      data: this.currentModelRequest,
+    })
+
+    console.log(`Model switch requested: ${modelType}`)
+  }
+
+  getModelSwitchRequest(): ModelSwitchRequest | null {
+    return this.currentModelRequest
+  }
+
+  clearModelSwitchRequest() {
+    this.currentModelRequest = null
   }
 
   getConnections(limit = 50): IDSConnection[] {
@@ -141,12 +194,12 @@ class IDSDataStore {
     const anomalies = recentConnections.filter((c) => c.classification === "anomaly")
     const normal = recentConnections.filter((c) => c.classification === "normal")
 
-    // Simple accuracy calculation (in real system, you'd need ground truth)
-    const accuracy = (normal.length / recentConnections.length) * 100
+    // Calculate average confidence as accuracy proxy
+    const avgConfidence = recentConnections.reduce((sum, conn) => sum + conn.confidence, 0) / recentConnections.length
 
     // Update metrics
     this.updateMetrics({
-      accuracy: Math.round(accuracy * 100) / 100,
+      accuracy: Math.round(avgConfidence * 100) / 100,
       precision: Math.round((normal.length / (normal.length + anomalies.length * 0.1)) * 100) / 100,
       recall: Math.round((anomalies.length / (anomalies.length + normal.length * 0.05)) * 100) / 100,
       throughput: recentConnections.length,

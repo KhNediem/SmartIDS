@@ -10,7 +10,9 @@ from datetime import datetime
 import threading
 import warnings
 import glob
-import requests  # Added for Next.js integration
+import requests
+import re
+import json
 
 # Suppress warnings for cleaner output
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -33,6 +35,157 @@ try:
     TENSORFLOW_AVAILABLE = True
 except ImportError:
     TENSORFLOW_AVAILABLE = False
+
+class TrafficSourceDetector:
+    """Detect if traffic is from human, bot, or AI based on patterns"""
+    
+    def __init__(self):
+        # Bot patterns (User-Agent strings, request patterns, etc.)
+        self.bot_patterns = [
+            r'bot', r'crawler', r'spider', r'scraper', r'wget', r'curl',
+            r'python-requests', r'urllib', r'httpx', r'aiohttp'
+        ]
+        
+        # AI patterns (API calls, model inference patterns)
+        self.ai_patterns = [
+            r'openai', r'gpt', r'claude', r'gemini', r'api\.', r'ml-',
+            r'inference', r'model', r'predict', r'generate'
+        ]
+        
+        # Human patterns (browser user agents, interactive patterns)
+        self.human_patterns = [
+            r'mozilla', r'chrome', r'firefox', r'safari', r'edge',
+            r'webkit', r'gecko'
+        ]
+    
+    def analyze_traffic_source(self, connection_data, packet_data=None):
+        """
+        Analyze traffic patterns to determine source type
+        Returns: (source_type, confidence)
+        """
+        features = self._extract_behavioral_features(connection_data, packet_data)
+        
+        # Score each category
+        bot_score = self._calculate_bot_score(features)
+        ai_score = self._calculate_ai_score(features)
+        human_score = self._calculate_human_score(features)
+        
+        # Determine the most likely source
+        scores = {
+            'bot': bot_score,
+            'ai': ai_score,
+            'human': human_score
+        }
+        
+        max_score = max(scores.values())
+        if max_score < 0.3:  # Low confidence threshold
+            return 'unknown', max_score
+        
+        source_type = max(scores, key=scores.get)
+        confidence = max_score
+        
+        return source_type, confidence
+    
+    def _extract_behavioral_features(self, connection_data, packet_data):
+        """Extract behavioral features from connection data"""
+        features = {
+            'request_rate': connection_data.get('count', 0) / max(connection_data.get('duration', 1), 1),
+            'bytes_ratio': connection_data.get('src_bytes', 0) / max(connection_data.get('dst_bytes', 1), 1),
+            'service': connection_data.get('service', ''),
+            'duration': connection_data.get('duration', 0),
+            'same_srv_rate': connection_data.get('same_srv_rate', 0),
+            'dst_host_count': connection_data.get('dst_host_count', 0),
+            'protocol': connection_data.get('protocol_type', ''),
+            'flag': connection_data.get('flag', ''),
+            'src_port': connection_data.get('src_port', 0),
+            'dst_port': connection_data.get('dst_port', 0)
+        }
+        return features
+    
+    def _calculate_bot_score(self, features):
+        """Calculate bot likelihood score"""
+        score = 0.0
+        
+        # High request rate indicates bot behavior
+        if features['request_rate'] > 10:
+            score += 0.4
+        elif features['request_rate'] > 5:
+            score += 0.2
+        
+        # Consistent patterns indicate automation
+        if features['same_srv_rate'] > 0.8:
+            score += 0.3
+        
+        # Common bot services
+        if features['service'] in ['http', 'ftp', 'ssh']:
+            score += 0.1
+        
+        # Bot-like connection flags
+        if features['flag'] in ['S0', 'REJ']:
+            score += 0.2
+        
+        # High dst_host_count indicates scanning behavior
+        if features['dst_host_count'] > 20:
+            score += 0.3
+        
+        return min(score, 1.0)
+    
+    def _calculate_ai_score(self, features):
+        """Calculate AI/ML service likelihood score"""
+        score = 0.0
+        
+        # API-like patterns
+        if features['service'] in ['http', 'http_443']:
+            if features['dst_port'] in [80, 443, 8080, 8000, 5000]:
+                score += 0.3
+        
+        # Consistent, moderate request patterns
+        if 1 < features['request_rate'] < 5:
+            score += 0.2
+        
+        # Balanced byte ratios (typical for API calls)
+        if 0.5 < features['bytes_ratio'] < 2.0:
+            score += 0.2
+        
+        # Medium duration connections
+        if 1 < features['duration'] < 30:
+            score += 0.1
+        
+        # Moderate host diversity
+        if 5 < features['dst_host_count'] < 15:
+            score += 0.2
+        
+        return min(score, 1.0)
+    
+    def _calculate_human_score(self, features):
+        """Calculate human user likelihood score"""
+        score = 0.0
+        
+        # Human-like browsing patterns
+        if features['service'] in ['http', 'http_443']:
+            score += 0.2
+        
+        # Moderate request rates
+        if 0.1 < features['request_rate'] < 2:
+            score += 0.3
+        
+        # Variable patterns (less consistent than bots)
+        if features['same_srv_rate'] < 0.6:
+            score += 0.2
+        
+        # Successful connections
+        if features['flag'] == 'SF':
+            score += 0.2
+        
+        # Reasonable session durations
+        if 5 < features['duration'] < 300:
+            score += 0.1
+        
+        # Low to moderate host diversity
+        if features['dst_host_count'] < 10:
+            score += 0.1
+        
+        return min(score, 1.0)
 
 class ConnectionKey:
     """Class to uniquely identify a connection"""
@@ -71,6 +224,14 @@ class IDSDataCollector:
         if self.nextjs_enabled:
             print(f"✓ Next.js integration enabled: {self.nextjs_url}")
         
+        # Model management
+        self.current_model_type = "unknown"
+        self.model_switch_check_interval = 5  # Check for model switch every 5 seconds
+        self.last_model_check = time.time()
+        
+        # Traffic source detector
+        self.traffic_detector = TrafficSourceDetector()
+        
         # Connection tracking
         self.active_connections = {}
         self.completed_connections = []
@@ -100,6 +261,7 @@ class IDSDataCollector:
         self.ml_loaded = False
         self.feature_names = None
         self.is_neural_network = False
+        self.model_accuracy = 0.0
         
         # Load ML components if available and requested
         if self.use_ml:
@@ -130,6 +292,66 @@ class IDSDataCollector:
         if self.nextjs_enabled:
             self._send_stats_to_nextjs()
     
+    def _check_model_switch_request(self):
+        """Check if there's a model switch request from Next.js"""
+        if not self.nextjs_enabled:
+            return
+        
+        try:
+            response = requests.get(
+                f"{self.nextjs_url}/api/ids/model-switch",
+                timeout=3
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                request = data.get('request')
+                
+                if request and request.get('modelType'):
+                    new_model_type = request['modelType']
+                    if new_model_type != self.current_model_type:
+                        print(f"\n🔄 Model switch requested: {new_model_type}")
+                        self._switch_model(new_model_type)
+                        
+                        # Clear the request
+                        requests.delete(f"{self.nextjs_url}/api/ids/model-switch", timeout=3)
+                        
+        except Exception as e:
+            # Silently handle errors to avoid spam
+            pass
+    
+    def _switch_model(self, model_type):
+        """Switch to a different model"""
+        try:
+            # Determine model filename based on type
+            if model_type == "neural-network":
+                model_filename = "complete_nn_ids_model.pkl"
+            elif model_type == "xgboost":
+                model_filename = "hids_model.pkl"
+            else:
+                print(f"⚠ Unknown model type: {model_type}")
+                return
+            
+            # Check if model file exists
+            if not os.path.exists(model_filename):
+                print(f"⚠ Model file not found: {model_filename}")
+                return
+            
+            print(f"🔄 Switching to {model_type} model...")
+            
+            # Update model name and reload
+            self.model_name = model_filename
+            self.current_model_type = model_type
+            self._load_ml_components()
+            
+            # Send updated stats
+            self._send_stats_to_nextjs()
+            
+            print(f"✅ Successfully switched to {model_type} model")
+            
+        except Exception as e:
+            print(f"❌ Error switching model: {e}")
+    
     def _send_stats_to_nextjs(self):
         """Send current stats to Next.js dashboard"""
         if not self.nextjs_enabled:
@@ -144,7 +366,9 @@ class IDSDataCollector:
                     "completedConnections": len(self.completed_connections),
                     "errors": self.error_count,
                     "startTime": self.start_time.isoformat(),
-                    "modelName": self.model_name
+                    "modelName": self.model_name,
+                    "modelType": self.current_model_type,
+                    "modelAccuracy": self.model_accuracy
                 }
             }
             
@@ -215,6 +439,7 @@ class IDSDataCollector:
                     
                     print(f"✓ Loading Neural Network package: {self.model_name}")
                     self.is_neural_network = True
+                    self.current_model_type = "neural-network"
                     
                     # Reconstruct the neural network model
                     model = model_from_json(model_data['model_architecture'])
@@ -229,6 +454,12 @@ class IDSDataCollector:
                     
                     self.model = model
                     self.scaler = model_data['scaler']
+                    
+                    # Get model accuracy if available
+                    if 'model_accuracy' in model_data:
+                        self.model_accuracy = model_data['model_accuracy']
+                    else:
+                        self.model_accuracy = 0.95  # Default for neural networks
                     
                     # Store feature names if available
                     if 'feature_names' in model_data:
@@ -264,9 +495,12 @@ class IDSDataCollector:
                     print("✓ Neural Network model loaded and compiled successfully")
                     
                 else:
-                    # Regular scikit-learn model
+                    # Regular scikit-learn model (XGBoost)
                     self.model = model_data
-                    print(f"✓ Loaded ML model: {self.model_name}")
+                    self.is_neural_network = False
+                    self.current_model_type = "xgboost"
+                    self.model_accuracy = 0.92  # Default for XGBoost
+                    print(f"✓ Loaded XGBoost model: {self.model_name}")
                     
                     # Load scaler and label encoders separately
                     if os.path.exists('scaler.pkl'):
@@ -286,7 +520,7 @@ class IDSDataCollector:
                         return
                 
                 self.ml_loaded = True
-                print("✓ All ML components loaded successfully")
+                print(f"✓ All ML components loaded successfully (Accuracy: {self.model_accuracy:.1%})")
                 
             else:
                 print(f"⚠ ML model file '{self.model_name}' not found, running without predictions")
@@ -300,9 +534,9 @@ class IDSDataCollector:
             self.ml_loaded = False
     
     def predict_record(self, record):
-        """Predict if a connection record is anomalous"""
+        """Predict if a connection record is anomalous and return confidence"""
         if not self.use_ml or not self.ml_loaded:
-            return 0  # Default to normal
+            return 0, 0.5  # Default to normal with 50% confidence
         
         try:
             record_input = record.copy()
@@ -366,7 +600,7 @@ class IDSDataCollector:
                 except Exception as e:
                     print(f"Error scaling features: {e}")
                     print(f"Feature count: {len(numeric_values)}")
-                    return 0  # Default to normal
+                    return 0, 0.5  # Default to normal with 50% confidence
             else:
                 scaled_features = features
         
@@ -375,15 +609,23 @@ class IDSDataCollector:
                 # TensorFlow/Keras model
                 prediction_prob = self.model.predict(scaled_features, verbose=0)[0][0]
                 prediction = 1 if prediction_prob > 0.5 else 0
+                confidence = prediction_prob if prediction == 1 else (1 - prediction_prob)
             else:
                 # Scikit-learn model
                 prediction = self.model.predict(scaled_features)[0]
+                # For XGBoost, try to get prediction probabilities
+                try:
+                    prediction_proba = self.model.predict_proba(scaled_features)[0]
+                    confidence = max(prediction_proba)
+                except:
+                    # Fallback to model accuracy as confidence
+                    confidence = self.model_accuracy
         
-            return prediction
+            return prediction, confidence
         
         except Exception as e:
             print(f"Warning: Error in prediction: {e}")
-            return 0  # Default to normal
+            return 0, 0.5  # Default to normal with 50% confidence
     
     def _initialize_service_map(self):
         """Initialize port to service mapping"""
@@ -405,6 +647,12 @@ class IDSDataCollector:
         """Process each captured packet with improved error handling"""
         try:
             self.packet_count += 1
+            
+            # Check for model switch requests periodically
+            current_time = time.time()
+            if current_time - self.last_model_check > self.model_switch_check_interval:
+                self._check_model_switch_request()
+                self.last_model_check = current_time
             
             if IP not in packet:
                 return
@@ -551,6 +799,8 @@ class IDSDataCollector:
                 'is_guest_login': 0,
                 'count': len(recent_conns['same_host']),
                 'srv_count': len(recent_conns['same_service']),
+                'src_port': conn_key.src_port,
+                'dst_port': conn_key.dst_port,
             }
             
             # Calculate rates
@@ -625,20 +875,29 @@ class IDSDataCollector:
                            'dst_host_srv_diff_host_rate']:
                     record[key] = 0.0
             
-            # Make prediction
+            # Make prediction with real confidence
+            prediction_confidence = 0.5
             if self.use_ml and self.ml_loaded:
                 try:
-                    prediction = self.predict_record(record)
+                    prediction, prediction_confidence = self.predict_record(record)
                     record['class'] = 'anomaly' if prediction == 1 else 'normal'
+                    record['confidence'] = prediction_confidence
                     
                     if record['class'] == 'anomaly':
                         print(f"\n🚨 [ALERT] Potential intrusion detected: {conn_key}")
-                        print(f"   Service: {record['service']}, Duration: {duration:.2f}s")
+                        print(f"   Service: {record['service']}, Duration: {duration:.2f}s, Confidence: {prediction_confidence:.1%}")
                 except Exception as e:
                     print(f"\nWarning: Prediction failed: {e}")
                     record['class'] = 'normal'
+                    record['confidence'] = 0.5
             else:
                 record['class'] = 'normal'
+                record['confidence'] = 0.5
+            
+            # Analyze traffic source (human/bot/AI)
+            traffic_source, traffic_confidence = self.traffic_detector.analyze_traffic_source(record)
+            record['traffic_source'] = traffic_source
+            record['traffic_source_confidence'] = traffic_confidence
             
             # Add to completed connections
             self.completed_connections.append(record)
@@ -719,8 +978,15 @@ class IDSDataCollector:
             # Print summary statistics
             if self.completed_connections:
                 anomaly_count = sum(1 for record in self.completed_connections if record['class'] == 'anomaly')
+                human_count = sum(1 for record in self.completed_connections if record.get('traffic_source') == 'human')
+                bot_count = sum(1 for record in self.completed_connections if record.get('traffic_source') == 'bot')
+                ai_count = sum(1 for record in self.completed_connections if record.get('traffic_source') == 'ai')
+                
                 print(f"✓ Normal connections: {len(self.completed_connections) - anomaly_count}")
                 print(f"⚠ Anomalous connections: {anomaly_count}")
+                print(f"👤 Human traffic: {human_count}")
+                print(f"🤖 Bot traffic: {bot_count}")
+                print(f"🧠 AI traffic: {ai_count}")
                 
         except Exception as e:
             print(f"Error writing output file: {e}")
@@ -745,6 +1011,8 @@ class IDSDataCollector:
         
         print(f"🚀 Starting network capture on {'all interfaces' if not self.interface else self.interface}")
         print(f"📊 ML model: {self.model_name if self.use_ml and self.ml_loaded else 'disabled'}")
+        print(f"🎯 Model type: {self.current_model_type}")
+        print(f"📈 Model accuracy: {self.model_accuracy:.1%}")
         print(f"💾 Output file: {self.output_file}")
         print(f"⏱️  Window size: {self.window_size} seconds")
         if self.nextjs_enabled:
@@ -808,11 +1076,12 @@ class IDSDataCollector:
             print(f"   Connections completed: {len(self.completed_connections)}")
             print(f"   Active connections: {len(self.active_connections)}")
             print(f"   Processing errors: {self.error_count}")
-            print(f"   Model used: {self.model_name if self.use_ml and self.ml_loaded else 'None'}")
+            print(f"   Model used: {self.model_name} ({self.current_model_type})")
+            print(f"   Model accuracy: {self.model_accuracy:.1%}")
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Network Intrusion Detection System Data Collector',
+        description='Enhanced Network Intrusion Detection System Data Collector',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

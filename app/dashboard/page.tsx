@@ -15,10 +15,12 @@ import {
   TreePine,
   Zap,
   Target,
-  Clock,
   TrendingUp,
   RefreshCw,
   Play,
+  User,
+  Bot,
+  RotateCcw,
 } from "lucide-react"
 import { MetricsChart } from "@/components/metrics-chart"
 import { ThreatDetectionChart } from "@/components/threat-detection-chart"
@@ -28,6 +30,7 @@ import { useIDSData } from "@/hooks/use-ids-data"
 
 export default function Dashboard() {
   const [selectedModel, setSelectedModel] = useState<string>("")
+  const [isModelSwitching, setIsModelSwitching] = useState(false)
   const router = useRouter()
   const { metrics, stats, isConnected, error, refreshData } = useIDSData()
 
@@ -48,6 +51,33 @@ export default function Dashboard() {
   const currentModel = modelInfo[selectedModel as keyof typeof modelInfo]
   const IconComponent = currentModel?.icon || Brain
 
+  const handleModelSwitch = async (newModel: string) => {
+    if (newModel === selectedModel || isModelSwitching) return
+
+    setIsModelSwitching(true)
+    try {
+      const response = await fetch("/api/ids/model-switch", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ modelType: newModel }),
+      })
+
+      if (response.ok) {
+        setSelectedModel(newModel)
+        localStorage.setItem("selectedModel", newModel)
+        console.log(`Model switch to ${newModel} requested`)
+      } else {
+        console.error("Failed to request model switch")
+      }
+    } catch (error) {
+      console.error("Error requesting model switch:", error)
+    } finally {
+      setIsModelSwitching(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 p-4">
       <div className="max-w-7xl mx-auto">
@@ -61,10 +91,45 @@ export default function Dashboard() {
             <div className="flex items-center gap-2">
               <IconComponent className="h-6 w-6 text-blue-600" />
               <h1 className="text-2xl font-bold text-slate-900">{currentModel?.name} Dashboard</h1>
+              {stats.modelAccuracy > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {(stats.modelAccuracy * 100).toFixed(1)}% accuracy
+                </Badge>
+              )}
             </div>
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Model Switch Buttons */}
+            <div className="flex gap-2">
+              <Button
+                variant={selectedModel === "neural-network" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleModelSwitch("neural-network")}
+                disabled={isModelSwitching}
+              >
+                {isModelSwitching && selectedModel !== "neural-network" ? (
+                  <RotateCcw className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Brain className="h-4 w-4 mr-2" />
+                )}
+                Neural Network
+              </Button>
+              <Button
+                variant={selectedModel === "xgboost" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleModelSwitch("xgboost")}
+                disabled={isModelSwitching}
+              >
+                {isModelSwitching && selectedModel !== "xgboost" ? (
+                  <RotateCcw className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <TreePine className="h-4 w-4 mr-2" />
+                )}
+                XGBoost
+              </Button>
+            </div>
+
             <Badge variant={isConnected ? "default" : "secondary"} className="gap-1">
               <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-400 animate-pulse" : "bg-gray-400"}`} />
               {isConnected ? "Live IDS Connected" : "IDS Offline"}
@@ -75,6 +140,21 @@ export default function Dashboard() {
             </Button>
           </div>
         </div>
+
+        {/* Model Switching Status */}
+        {isModelSwitching && (
+          <Card className="mb-6 border-blue-200 bg-blue-50">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 text-blue-800">
+                <RotateCcw className="h-5 w-5 animate-spin" />
+                <span className="font-medium">Switching Model...</span>
+              </div>
+              <p className="text-sm text-blue-700 mt-2">
+                The Python IDS collector is switching to the new model. This may take a few moments.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Connection Status */}
         {error && (
@@ -104,18 +184,18 @@ export default function Dashboard() {
                 To see live network traffic analysis, run the Python IDS collector:
               </p>
               <div className="bg-blue-100 p-3 rounded-lg font-mono text-sm text-blue-900">
-                <div>python ids_data_collector.py -i "Wi-Fi" -m complete_nn_ids_model.pkl</div>
+                <div>python ids_data_collector.py -i "Wi-Fi" --nextjs http://localhost:3000</div>
                 <div className="text-xs mt-1 text-blue-600"># Replace "Wi-Fi" with your network interface</div>
               </div>
               <p className="text-xs text-blue-600 mt-2">
-                The collector will automatically send data to this dashboard via API endpoints.
+                The collector will automatically switch models when you select them in the dashboard.
               </p>
             </CardContent>
           </Card>
         )}
 
         {/* Key Metrics Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -158,11 +238,24 @@ export default function Dashboard() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Latency</p>
-                  <p className="text-2xl font-bold text-purple-600">{metrics.latency.toFixed(1)}ms</p>
-                  <p className="text-xs text-slate-500">avg response</p>
+                  <p className="text-sm font-medium text-slate-600">Human Traffic</p>
+                  <p className="text-2xl font-bold text-blue-600">{metrics.humanTraffic}</p>
+                  <p className="text-xs text-slate-500">connections</p>
                 </div>
-                <Clock className="h-8 w-8 text-purple-600" />
+                <User className="h-8 w-8 text-blue-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Bot/AI Traffic</p>
+                  <p className="text-2xl font-bold text-purple-600">{metrics.botTraffic + metrics.aiTraffic}</p>
+                  <p className="text-xs text-slate-500">connections</p>
+                </div>
+                <Bot className="h-8 w-8 text-purple-600" />
               </div>
             </CardContent>
           </Card>
@@ -209,41 +302,48 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
-                Security Status
+                Traffic Analysis
               </CardTitle>
-              <CardDescription>Current threat detection status</CardDescription>
+              <CardDescription>Current traffic source breakdown</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <span className="font-medium">{isConnected ? "System Protected" : "System Offline"}</span>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <User className="h-4 w-4 text-blue-600" />
+                      <span className="font-medium">Human</span>
+                    </div>
+                    <p className="text-lg font-semibold text-blue-600">{metrics.humanTraffic}</p>
                   </div>
-                  <Badge
-                    variant="secondary"
-                    className={isConnected ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}
-                  >
-                    {isConnected ? "Active" : "Inactive"}
-                  </Badge>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <Bot className="h-4 w-4 text-orange-600" />
+                      <span className="font-medium">Bot</span>
+                    </div>
+                    <p className="text-lg font-semibold text-orange-600">{metrics.botTraffic}</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <Brain className="h-4 w-4 text-purple-600" />
+                      <span className="font-medium">AI</span>
+                    </div>
+                    <p className="text-lg font-semibold text-purple-600">{metrics.aiTraffic}</p>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-slate-600">False Positives</p>
-                    <p className="text-lg font-semibold">{metrics.falsePositives}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-600">Normal Traffic</p>
-                    <p className="text-lg font-semibold">{metrics.normalTraffic}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-600">Total Packets</p>
-                    <p className="text-lg font-semibold">{stats.totalPackets}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-600">Model</p>
-                    <p className="text-lg font-semibold">{stats.modelName}</p>
+                <div className="pt-4 border-t">
+                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <span className="font-medium">{isConnected ? "System Protected" : "System Offline"}</span>
+                    </div>
+                    <Badge
+                      variant="secondary"
+                      className={isConnected ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}
+                    >
+                      {isConnected ? "Active" : "Inactive"}
+                    </Badge>
                   </div>
                 </div>
               </div>
