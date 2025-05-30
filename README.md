@@ -78,7 +78,7 @@ python ids_data_collector.py --list-interfaces
 python ids_data_collector.py -i "Wi-Fi" -m complete_nn_ids_model.pkl
 \`\`\`
 
-(If for some reason, you can't terminate the packet capture from the terminal with CTRL+C, you can terminate it by going to the task manager, it'll be a python process that uses around 270mb of RAM)
+(If for some reason, you can't terminate the packet capture from the terminal with CTRL+C, you can terminate it by going to the task manager, it'll be a python process that uses around 270mb of memory)
 
 ### 4. Testing the Integration
 
